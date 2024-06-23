@@ -195,7 +195,7 @@ function main_menu() {
         echo "5. 交易机器人 tx_bot"
         echo "1618. 卸载节点 uninstall_node"
         echo "0. 退出脚本exit"
-        read -p "请输入选项（1-10）: " OPTION
+        read -p "请输入选项: " OPTION
 
         case $OPTION in
         1) install_node ;;

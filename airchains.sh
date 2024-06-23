@@ -74,13 +74,27 @@ EOF
 function add_wallet() {
 	read -p "钱包名称: " wallet_name
     eigenlayer operator keys create  -i=true --key-type ecdsa $wallet_name
+    
+    echo "上面的信息记录好了吗。[Y/N]"
+    read -r -p "请确认: " response
+    case "$response" in
+        [yY][eE][sS]|[yY]) 
+            echo "很好"
+            ;;
+        *)
+            echo "快复制下来"
+            ;;
+    esac
+
 }
 
 # 启动节点
 function start_node(){
+    source $HOME/.bash_profile
     read -p "节点名称: " node_name
     read -p "钱包公钥: " Public_Key_hex
     read -p "air地址名: " airchains_addr_name
+    cd $HOME/tracks
     # 初始化sequencer
     go run cmd/main.go init --daRpc "disperser-holesky.eigenda.xyz" --daKey "$Public_Key_hex" --daType "eigen" --moniker "$node_name" --stationRpc "http://127.0.0.1:26657" --stationAPI "http://127.0.0.1:1317" --stationType "wasm"
     
@@ -89,7 +103,7 @@ function start_node(){
     #go run cmd/main.go keys junction --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys
     output=$(go run cmd/main.go keys junction --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys 2>&1)
     echo "$output"
-    address=$(echo "$output" | grep 'Address:' | awk '{print \$2}')
+    address=$(echo "$output" | grep 'Address:' | awk '{print $2}')
     
     # 初始化prover
     init_prover $airchains_addr_name $address
@@ -97,6 +111,7 @@ function start_node(){
 
 # 初始化prover
 function init_prover(){
+    source $HOME/.bash_profile
     go run cmd/main.go prover v1WASM
     nodeid=$(grep "node_id" ~/.tracks/config/sequencer.toml | awk -F '"' '{print $2}')
     ip=$(curl -s4 ifconfig.me/ip)
@@ -128,7 +143,7 @@ WantedBy=multi-user.target
 EOF
     sudo systemctl daemon-reload
     sudo systemctl enable stationd
-    sudo systemctl restart stationd
+    sudo systemctl start stationd
 
 }
 
@@ -172,9 +187,8 @@ function main_menu() {
         echo "1. 安装节点 install_node"
         echo "2. 创建钱包 add_wallet"
         echo "3. 启动节点 start_node"
-        echo "4. 初始化prover init_prover"
-        echo "5. 查看日志 view_stationd_logs"
-        echo "6. 交易机器人 tx_bot"
+        echo "4. 查看日志 view_stationd_logs"
+        echo "5. 交易机器人 tx_bot"
         echo "1618. 卸载节点 uninstall_node"
         echo "0. 退出脚本exit"
         read -p "请输入选项（1-10）: " OPTION
@@ -183,9 +197,8 @@ function main_menu() {
         1) install_node ;;
         2) add_wallet ;;
         3) start_node ;;
-        4) init_prover ;;
-        5) view_stationd_logs ;;
-        6) tx_bot ;;
+        4) view_stationd_logs ;;
+        5) tx_bot ;;
         1618) uninstall_node ;;
         0) echo "退出脚本。"; exit 0 ;;
         *) echo "无效选项。" ;;

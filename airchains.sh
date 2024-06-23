@@ -93,7 +93,8 @@ function start_node(){
     source $HOME/.bash_profile
     read -p "节点名称: " node_name
     read -p "钱包公钥: " Public_Key_hex
-    read -p "air地址名: " airchains_addr_name
+    read -p "air地址名(自定义): " airchains_addr_name
+    Echo "正在启动，请稍等..."
     cd $HOME/tracks
     # 初始化sequencer
     go run cmd/main.go init --daRpc "disperser-holesky.eigenda.xyz" --daKey "$Public_Key_hex" --daType "eigen" --moniker "$node_name" --stationRpc "http://127.0.0.1:26657" --stationAPI "http://127.0.0.1:1317" --stationType "wasm"

@@ -94,7 +94,7 @@ function start_node(){
     read -p "节点名称: " node_name
     read -p "钱包公钥: " Public_Key_hex
     read -p "air地址名(自定义): " airchains_addr_name
-    Echo "正在启动，请稍等..."
+    echo "正在启动，请稍等..."
     cd $HOME/tracks
     # 初始化sequencer
     go run cmd/main.go init --daRpc "disperser-holesky.eigenda.xyz" --daKey "$Public_Key_hex" --daType "eigen" --moniker "$node_name" --stationRpc "http://127.0.0.1:26657" --stationAPI "http://127.0.0.1:1317" --stationType "wasm"
@@ -108,6 +108,8 @@ function start_node(){
     
     # 初始化prover
     init_prover $airchains_addr_name $address
+    
+    echo "节点已启动..."
 }
 
 # 初始化prover
@@ -156,6 +158,7 @@ function view_stationd_logs() {
 # 刷交易量tx
 function tx_bot(){
     screen -S wasmstation -d -m bash -c "cd $HOME; addr=\$(\$HOME/wasm-station/build/wasmstationd keys show node --keyring-backend test -a); while true; do \$HOME/wasm-station/build/wasmstationd tx bank send node \$addr 1stake --from node --chain-id station-1 --keyring-backend test -y; sleep 6; done"
+    echo "机器人已启动，输入命令screen -r wasmstation 查看运行情况..."
 }
 
 # 卸载节点功能

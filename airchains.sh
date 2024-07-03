@@ -20,9 +20,14 @@ function install_node() {
     # 安装 Go
     if ! check_go_installation; then
         sudo rm -rf /usr/local/go
-        curl -L https://go.dev/dl/go1.22.0.linux-amd64.tar.gz | sudo tar -xzf - -C /usr/local
-        echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> $HOME/.bash_profile
-        source $HOME/.bash_profile
+        curl https://dl.google.com/go/go1.22.1.linux-amd64.tar.gz | sudo tar -C/usr/local -zxvf - ;
+        cat <<'EOF' >>$HOME/.bashrc
+export GOROOT=/usr/local/go
+export GOPATH=$HOME/go
+export GO111MODULE=on
+export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
+EOF
+        source $HOME/.bashrc
         go version
     fi
 
@@ -101,8 +106,8 @@ function start_node(){
     
     # 创建airchains 地址
     echo "保存好助记词和地址，后续会用到："
-    #go run cmd/main.go keys junction --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys
     output=$(go run cmd/main.go keys junction --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys 2>&1)
+    
     echo "$output"
     address=$(echo "$output" | grep 'Address:' | awk '{print $2}')
     
@@ -153,6 +158,7 @@ EOF
 # 查看station日志
 function view_stationd_logs() {
     sudo journalctl -u stationd -f -o cat
+    sudo journalctl -u wasmstationd -f -o cat
 }
 
 # 刷交易量tx

@@ -19,16 +19,14 @@ function install_node() {
 
     # 安装 Go
     if ! check_go_installation; then
+        # 安装GO
         sudo rm -rf /usr/local/go
-        curl https://dl.google.com/go/go1.22.1.linux-amd64.tar.gz | sudo tar -C/usr/local -zxvf - ;
-        cat <<'EOF' >>$HOME/.bashrc
-export GOROOT=/usr/local/go
-export GOPATH=$HOME/go
-export GO111MODULE=on
-export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
-EOF
-        source $HOME/.bashrc
+        wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -P /tmp/
+        sudo tar -C /usr/local -xzf /tmp/go1.22.1.linux-amd64.tar.gz
+        echo "export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin" >> ~/.bashrc
+        export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
         go version
+        
     fi
 
     # 克隆代码库
@@ -78,7 +76,26 @@ EOF
 # 创建钱包
 function add_wallet() {
 	read -p "钱包名称: " wallet_name
-    eigenlayer operator keys create  -i=true --key-type ecdsa $wallet_name
+    eigenlayer operator keys create -i=true --key-type ecdsa $wallet_name
+    
+    echo "上面的信息记录好了吗。[Y/N]"
+    read -r -p "请确认: " response
+    case "$response" in
+        [yY][eE][sS]|[yY]) 
+            echo "很好"
+            ;;
+        *)
+            echo "快复制下来"
+            ;;
+    esac
+
+}
+
+# 导入钱包
+function import_wallet() {
+	read -p "钱包名称: " wallet_name
+	read -p "钱包私钥: " Private_Key
+    eigenlayer operator keys import -i=true --key-type ecdsa $wallet_name $Private_Key
     
     echo "上面的信息记录好了吗。[Y/N]"
     read -r -p "请确认: " response
@@ -95,7 +112,7 @@ function add_wallet() {
 
 # 启动节点
 function start_node(){
-    source $HOME/.bash_profile
+    source $HOME/.bashrc
     read -p "节点名称: " node_name
     read -p "钱包公钥: " Public_Key_hex
     read -p "air地址名(自定义): " airchains_addr_name
@@ -119,7 +136,7 @@ function start_node(){
 
 # 初始化prover
 function init_prover(){
-    source $HOME/.bash_profile
+    source $HOME/.bashrc
     go run cmd/main.go prover v1WASM
     nodeid=$(grep "node_id" ~/.tracks/config/sequencer.toml | awk -F '"' '{print $2}')
     ip=$(curl -s4 ifconfig.me/ip)
@@ -167,6 +184,23 @@ function tx_bot(){
     echo "机器人已启动，输入命令screen -r wasmstation 查看运行情况..."
 }
 
+# 修改 station rpc
+function update_station_rpc(){
+    source $HOME/.bashrc
+    read -p "air地址名: " airchains_addr_name
+    read -p "air钱包地址: " address
+    read -p "RPC地址: " RPC_ADDR
+    nodeid=$(grep "node_id" ~/.tracks/config/sequencer.toml | awk -F '"' '{print $2}')
+    ip=$(curl -s4 ifconfig.me/ip)
+    bootstrapNode=/ip4/$ip/tcp/2300/p2p/$nodeid
+
+    sudo systemctl stop stationd
+    # 创建station
+    go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "$RPC_ADDR" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
+    sudo systemctl start stationd
+
+}
+
 # 卸载节点功能
 function uninstall_node() {
     echo "确定要卸载节点程序吗？这将会删除所有相关的数据。[Y/N]"
@@ -199,6 +233,8 @@ function main_menu() {
         echo "3. 启动节点 start_node"
         echo "4. 查看日志 view_stationd_logs"
         echo "5. 交易机器人 tx_bot"
+        echo "6. 导入钱包 import_wallet"
+        echo "7. 修改STATION RPC update_station_rpc"
         echo "1618. 卸载节点 uninstall_node"
         echo "0. 退出脚本exit"
         read -p "请输入选项: " OPTION
@@ -209,6 +245,8 @@ function main_menu() {
         3) start_node ;;
         4) view_stationd_logs ;;
         5) tx_bot ;;
+        6) import_wallet ;;
+        7) update_station_rpc ;;
         1618) uninstall_node ;;
         0) echo "退出脚本。"; exit 0 ;;
         *) echo "无效选项。" ;;

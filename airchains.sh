@@ -144,7 +144,8 @@ function init_prover(){
     echo $bootstrapNode
     
     # 创建station
-    go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "https://junction-testnet-rpc.synergynodes.com/" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
+    #go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "https://junction-testnet-rpc.synergynodes.com/" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
+    go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "https://airchainsrpc.sbgid.com/" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
     
     # 修改gas price
     sed -i 's/gasFees := fmt.Sprintf("%damf", gas)/gasFees := fmt.Sprintf("%damf", 2*gas)/' "$HOME/tracks/junction/verifyPod.go"
@@ -186,19 +187,24 @@ function tx_bot(){
 
 # 修改 station rpc
 function update_station_rpc(){
+    
     source $HOME/.bashrc
     read -p "air地址名: " airchains_addr_name
     read -p "air钱包地址: " address
     read -p "RPC地址: " RPC_ADDR
+    
     nodeid=$(grep "node_id" ~/.tracks/config/sequencer.toml | awk -F '"' '{print $2}')
     ip=$(curl -s4 ifconfig.me/ip)
     bootstrapNode=/ip4/$ip/tcp/2300/p2p/$nodeid
-
+    echo $bootstrapNode
+    echo "正在停止stationd..."
     sudo systemctl stop stationd
     # 创建station
+    echo "正在更换RPC..."
     go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "$RPC_ADDR" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
+    echo "正在启动stationd..."
     sudo systemctl start stationd
-
+    
 }
 
 # 卸载节点功能

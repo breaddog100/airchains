@@ -119,11 +119,11 @@ function start_node(){
     echo "正在启动，请稍等..."
     cd $HOME/tracks
     # 初始化sequencer
-    go run cmd/main.go init --daRpc "disperser-holesky.eigenda.xyz" --daKey "$Public_Key_hex" --daType "eigen" --moniker "$node_name" --stationRpc "http://127.0.0.1:26657" --stationAPI "http://127.0.0.1:1317" --stationType "wasm"
+    /usr/local/go/bin/go run cmd/main.go init --daRpc "disperser-holesky.eigenda.xyz" --daKey "$Public_Key_hex" --daType "eigen" --moniker "$node_name" --stationRpc "http://127.0.0.1:26657" --stationAPI "http://127.0.0.1:1317" --stationType "wasm"
     
     # 创建airchains 地址
     echo "保存好助记词和地址，后续会用到："
-    output=$(go run cmd/main.go keys junction --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys 2>&1)
+    output=$(/usr/local/go/bin/go run cmd/main.go keys junction --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys 2>&1)
     
     echo "$output"
     address=$(echo "$output" | grep 'Address:' | awk '{print $2}')
@@ -137,7 +137,7 @@ function start_node(){
 # 初始化prover
 function init_prover(){
     source $HOME/.bashrc
-    go run cmd/main.go prover v1WASM
+    /usr/local/go/bin/go run cmd/main.go prover v1WASM
     nodeid=$(grep "node_id" ~/.tracks/config/sequencer.toml | awk -F '"' '{print $2}')
     ip=$(curl -s4 ifconfig.me/ip)
     bootstrapNode=/ip4/$ip/tcp/2300/p2p/$nodeid
@@ -145,7 +145,7 @@ function init_prover(){
     
     # 创建station
     #go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "https://junction-testnet-rpc.synergynodes.com/" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
-    go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "https://airchainsrpc.sbgid.com/" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
+    /usr/local/go/bin/go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "https://airchains-rpc.chainad.org/" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
     
     # 修改gas price
     sed -i 's/gasFees := fmt.Sprintf("%damf", gas)/gasFees := fmt.Sprintf("%damf", 2*gas)/' "$HOME/tracks/junction/verifyPod.go"
@@ -160,7 +160,7 @@ After=network-online.target
 [Service]
 User=$USER
 WorkingDirectory=$HOME/tracks/
-ExecStart=$(which go) run cmd/main.go start
+ExecStart=/usr/local/go/bin/go run cmd/main.go start
 Restart=always
 RestartSec=3
 LimitNOFILE=65535
@@ -201,7 +201,7 @@ function update_station_rpc(){
     sudo systemctl stop stationd
     # 创建station
     echo "正在更换RPC..."
-    go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "$RPC_ADDR" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
+    /usr/local/go/bin/go run cmd/main.go create-station --accountName $airchains_addr_name --accountPath $HOME/.tracks/junction-accounts/keys --jsonRPC "$RPC_ADDR" --info "WASM Track" --tracks $address --bootstrapNode "$bootstrapNode"
     echo "正在启动stationd..."
     sudo systemctl start stationd
     

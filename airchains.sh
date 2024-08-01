@@ -39,9 +39,6 @@ update_script() {
 
 }
 
-# 检查更新
-update_script
-
 # 检查Go环境
 function check_go_installation() {
     if command -v go > /dev/null 2>&1; then
@@ -379,6 +376,9 @@ function main_menu() {
     done
     
 }
+
+# 检查更新
+update_script
 
 # 显示主菜单
 main_menu

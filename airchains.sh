@@ -1,4 +1,46 @@
 #!/bin/bash
+# 设置版本号
+current_version=20240801001
+
+update_script() {
+    # 指定URL
+    update_url="https://raw.githubusercontent.com/breaddog100/airchains/main/airchains.sh"
+    file_name=$(basename "$update_url")
+
+    # 下载脚本文件
+    tmp=$(date +%s)
+    timeout 10s curl -s -o "$HOME/$tmp" -H "Cache-Control: no-cache" "$update_url?$tmp"
+    exit_code=$?
+    if [[ $exit_code -eq 124 ]]; then
+        echo "命令超时"
+        return 1
+    elif [[ $exit_code -ne 0 ]]; then
+        echo "下载失败"
+        return 1
+    fi
+
+    # 检查是否有新版本可用
+    latest_version=$(grep -oP 'current_version=([0-9]+)' $HOME/$tmp | sed -n 's/.*=//p')
+
+    if [[ "$latest_version" -gt "$current_version" ]]; then
+        clear
+        echo ""
+        # 提示需要更新脚本
+        printf "\033[31m脚本有新版本可用！当前版本：%s，最新版本：%s\033[0m\n" "$current_version" "$latest_version"
+        echo "正在更新..."
+        sleep 3
+        mv $HOME/$tmp $HOME/$file_name
+        chmod +x $HOME/$file_name
+        exec "$HOME/$file_name"
+    else
+        # 脚本是最新的
+        rm -f $tmp
+    fi
+
+}
+
+# 检查更新
+update_script
 
 # 检查Go环境
 function check_go_installation() {
@@ -15,7 +57,7 @@ function check_go_installation() {
 function install_node() {
     # 更新和安装必要的软件
     sudo apt update && sudo apt upgrade -y
-    sudo apt install -y curl jq build-essential git wget unzip
+    sudo apt install -y curl jq build-essential git wget unzip parallel
 
     # 安装 Go
     if ! check_go_installation; then
@@ -26,7 +68,6 @@ function install_node() {
         echo "export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin" >> ~/.bashrc
         export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin
         go version
-        
     fi
 
     # 克隆代码库
@@ -207,6 +248,79 @@ function update_station_rpc(){
     
 }
 
+# 搜索最佳rpc
+function find_good_rpc(){
+    sudo apt-get update
+    sudo apt-get install parallel
+
+    # URL 列表
+    urls=(
+        "https://airchains-rpc-testnet.zulnaaa.com/"
+        "https://t-airchains.rpc.utsa.tech/"
+        "https://airchains.rpc.t.stavr.tech/"
+        "https://airchains-rpc.chainad.org/"
+        "https://junction-rpc.kzvn.xyz/"
+        "https://airchains-rpc.elessarnodes.xyz/"
+        "https://airchains-testnet-rpc.apollo-sync.com/"
+        "https://rpc-airchain.danggia.xyz/"
+        "https://airchains-rpc.stakeme.pro/"
+        "https://airchains-testnet-rpc.crouton.digital/"
+        "https://airchains-testnet-rpc.itrocket.net/"
+        "https://rpc1.airchains.t.cosmostaking.com/"
+        "https://rpc.airchain.yx.lu/"
+        "https://airchains-testnet-rpc.staketab.org/"
+        "https://junction-rpc.owlstake.com/"
+        "https://rpctt-airchain.sebatian.org/"
+        "https://rpc.airchains.aknodes.net/"
+        "https://airchains-rpc-testnet.zulnaaa.com/"
+        "https://rpc-testnet-airchains.nodeist.net/"
+        "https://airchains-testnet.rpc.stakevillage.net/"
+        "https://airchains-rpc.sbgid.com/"
+        "https://airchains-test.rpc.moonbridge.team/"
+        "https://rpc-airchains-t.sychonix.com/"
+        "https://airchains-rpc.anonid.top/"
+        "https://rpc.airchains.stakeup.tech/"
+        "https://junction-testnet-rpc.nodesync.top/"
+        "https://rpc-airchain.vnbnode.com/"
+        "https://airchain-t-rpc.syanodes.my.id"
+        "https://airchains-test-rpc.nodesteam.tech/"
+        "https://junction-rpc.validatorvn.com/"
+    )
+    
+    # 定义并行 ping 函数
+    ping_url() {
+        url=\$1
+        
+        echo "Pinging $url..."
+        
+        # 记录成功和失败的计数
+        successful_pings=0
+        failed_pings=0
+        
+        for i in {1..3}; do
+            if curl -o /dev/null -s --head --fail "$url"; then
+                echo "Ping $i to $url successful"
+                ((successful_pings++))
+            else
+                echo "Ping $i to $url failed"
+                ((failed_pings++))
+            fi
+            sleep 1
+        done
+        
+        # 打印成功和失败的总数
+        echo "Successful pings: $successful_pings"
+        echo "Failed pings: $failed_pings"
+        echo ""
+    }
+    
+    export -f ping_url
+    
+    # 使用 parallel 并行化执行 ping 操作
+    parallel -j 4 ping_url ::: "${urls[@]}"
+
+}
+
 # 卸载节点功能
 function uninstall_node() {
     echo "确定要卸载节点程序吗？这将会删除所有相关的数据。[Y/N]"
@@ -231,6 +345,7 @@ function main_menu() {
     while true; do
         clear
         echo "===============Airchains 一键部署脚本==============="
+        echo "当前版本：$current_version"
     	echo "沟通电报群：https://t.me/lumaogogogo"
     	echo "最低配置：2C4G100G；推荐配置：4C8G300G"
         echo "请选择项"
@@ -241,6 +356,7 @@ function main_menu() {
         echo "5. 交易机器人 tx_bot"
         echo "6. 导入钱包 import_wallet"
         echo "7. 修改STATION RPC update_station_rpc"
+        echo "8. 搜索最佳rpc find_good_rpc"
         echo "1618. 卸载节点 uninstall_node"
         echo "0. 退出脚本exit"
         read -p "请输入选项: " OPTION
@@ -253,6 +369,7 @@ function main_menu() {
         5) tx_bot ;;
         6) import_wallet ;;
         7) update_station_rpc ;;
+        8) find_good_rpc ;;
         1618) uninstall_node ;;
         0) echo "退出脚本。"; exit 0 ;;
         *) echo "无效选项。" ;;
